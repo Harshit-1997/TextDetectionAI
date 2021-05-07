@@ -27,15 +27,43 @@ def getPredictions(img):
     return ind, conf
 
 ########################################################################################################################
-#
-#def group(boxes):
-#    pl = 0
-#    nl = 1
-#    boxes.sort(key = lambda box:(box[0],box[1]))
-#    while pl!=nl:
-#        for i in range(1,len(boxes))
-#
-#
+
+def group(boxes):
+    pl = 0
+    nl = 1
+    boxes.sort(key = lambda box:(box[0],box[1]))
+    while pl!=nl:
+        pl = len(boxes)
+        i=0
+        while i<len(boxes)-1:
+            j=i+1
+            while j<len(boxes):
+                x1 = boxes[j][0]
+                y1 = boxes[j][1]
+                x2 = boxes[j][2]+x1
+                y2 = boxes[j][3]+y1
+                x3 = boxes[i][0]
+                y3 = boxes[i][1]
+                x4 = boxes[i][2]+x3
+                y4 = boxes[i][3]+y3
+     
+                if x1<=x3<=x2 or x1<=x4<=x2 or x3<=x1<=x4 or x3<=x2<=x4:
+                    if y1<=y3<=y2 or y1<=y4<=y2 or y3<=y1<=y4 or y3<=y2<=y4:
+                        bx = min(x1,x3)
+                        by = min(y1,y3)
+                        bw = max(x2,x4)-bx
+                        bh = max(y2,y4)-by
+     
+                        boxes.pop(j)
+                        boxes[i] = [bx,by,bw,bh]
+
+                j+=1
+            i+=1
+            #boxes.sort(key = lambda box:(box[0],box[1]))
+        nl = len(boxes)
+    return boxes
+
+
 ########################################################################################################################
 
 def expansion(bounding_boxes, slide_x = 1, slide_y=1):
@@ -70,7 +98,7 @@ def getBoxes(ind,conf):
                 #print(1 if ind[i][j]==1 else' ',end='')
         #print()
 
-    bound_box = expansion(cb)
+    bound_box = group(cb)#expansion(cb)
     return bound_box
 
 ########################################################################################################################
@@ -84,7 +112,7 @@ def drawBoxes(img,boxes):
     for x,y,sx,sy in boxes:
             test = cv2.rectangle(test,(y,x),(y+sy,x+sx),(0,255,0),1)
 
-    fig=plt.figure(figsize=(12,8), dpi= 200, facecolor='w', edgecolor='k')
+    fig=plt.figure(figsize=(24,24), dpi= 400, facecolor='w', edgecolor='k')
     plt.imshow(test/255)
     plt.show()
 
@@ -96,6 +124,7 @@ def getSentenceImg(img,boxes):
     for x1,y1,w,h in boxes:
         x = img[x1:w+x1,y1:y1+h,0]/255
         x[x<0.25]=0
+        x[x>0.5]=1
         while True:
             if np.max(x[0,:])>0:
                 break
@@ -104,11 +133,19 @@ def getSentenceImg(img,boxes):
             if np.max(x[-1,:])>0:
                 break
             x = x[:-1,:]
+        while True:
+            if np.max(x[:,0])>0:
+                break
+            x = x[:,1:]
+        while True:
+            if np.max(x[:,-1])>0:
+                break
+            x = x[:,:-1]
 
         if x.shape[0]<28:
             w = (28-x.shape[0])//2
             x = np.pad(x,[(w,w)])
-        sentences.append(x)
+        sentences.append([x1,y1,x])
     return sentences
 
 ########################################################################################################################
@@ -116,7 +153,7 @@ def getSentence(path,show=False):
     img = loadImage(path)
     
     if show:
-        fig=plt.figure(figsize=(12,8), dpi= 200, facecolor='w', edgecolor='k')
+        fig=plt.figure(figsize=(24,24), dpi= 400, facecolor='w', edgecolor='k')
         plt.imshow(img)
         plt.show()
 
@@ -128,7 +165,7 @@ def getSentence(path,show=False):
 
     sentences = getSentenceImg(img,boxes)
     if show:
-        for sentence in sentences:
+        for x,y,sentence in sentences:
             fig=plt.figure(figsize=(12,8), dpi= 200, facecolor='w', edgecolor='k')
             plt.imshow(sentence)
             plt.show()
@@ -137,4 +174,4 @@ def getSentence(path,show=False):
 
 
 
-getSentence("./TestData/9.jpg",True)
+#getSentence("./TestData/5.jpg",True)
